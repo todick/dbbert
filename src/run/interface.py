@@ -18,6 +18,7 @@ print(sys.path)
 
 from dbms.postgres import PgConfig
 from dbms.mysql import MySQLconfig
+from dbms.mariadb import MariaDBconfig
 from pybullet_utils.util import set_global_seeds
 from configparser import ConfigParser
 from doc.collection import DocCollection

@@ -7,6 +7,7 @@ from dbms import factory
 from configparser import ConfigParser
 from doc.collection import DocCollection
 from dbms.mysql import MySQLconfig
+from dbms.mariadb import MariaDBconfig
 
 #,, ('ms', 'tuning_docs/mysql100')
 
@@ -14,9 +15,11 @@ config = ConfigParser()
 config.read('config/pg_tpch_base.ini')
 pg = factory.from_file(config)
 ms = MySQLconfig('tpch', 'root', 'mysql1234-', '', '', 900)
+md = MariaDBconfig('tpch', 'root', 'mysql1234-', '', '', 900)
 
 for doc_id, doc_path, dbms in [('pg', 'tuning_docs/postgres100', pg),
-                               ('ms', 'tuning_docs/mysql100', ms)]:
+                               ('ms', 'tuning_docs/mysql100', ms),
+                               ('md', 'tuning_docs/mysql100', md)]:
     docs = DocCollection(
         docs_path=doc_path, 
         dbms=dbms, size_threshold=128,

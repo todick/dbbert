@@ -16,6 +16,7 @@ print(sys.path)
 
 from dbms.postgres import PgConfig
 from dbms.mysql import MySQLconfig
+from dbms.mariadb import MariaDBconfig
 from pybullet_utils.util import set_global_seeds
 from configparser import ConfigParser
 from doc.collection import DocCollection
@@ -103,6 +104,8 @@ for config_path, path_to_docs, log_path in [
     recover_cmd = get_value(config, 'DATABASE', 'recovery_cmd', '')
     if def_db == 'ms':
         dbms_id = 1
+    elif def_db == 'md':
+        dbms_id = 2
     else:
         dbms_id = 0
     
@@ -127,6 +130,10 @@ for config_path, path_to_docs, log_path in [
             recover_cmd, timeout_s)
     elif dbms_id == 1:
         dbms = MySQLconfig(
+            db_name, db_user, db_pwd, restart_cmd, 
+            recover_cmd, timeout_s)
+    elif dbms_id == 2:
+        dbms = MariaDBconfig(
             db_name, db_user, db_pwd, restart_cmd, 
             recover_cmd, timeout_s)
     else:

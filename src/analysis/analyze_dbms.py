@@ -6,6 +6,7 @@ Created on Jun 24, 2021
 from dbms import factory
 from configparser import ConfigParser
 from dbms.mysql import MySQLconfig
+from dbms.mariadb import MariaDBconfig
 
 config = ConfigParser()
 config.read('config/pg_tpch_base.ini')
@@ -13,3 +14,5 @@ pg = factory.from_file(config)
 print(f'Tuning {len(pg.all_params())} parameters for Postgres')
 ms = MySQLconfig('tpch', 'root', 'mysql1234-', '', '', 900)
 print(f'Tuning {len(ms.all_params())} parameters for MySQL')
+md = MariaDBconfig('tpch', 'root', 'mysql1234-', '', '', 900)
+print(f'Tuning {len(md.all_params())} parameters for MySQL')

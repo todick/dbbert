@@ -128,8 +128,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--timeout_s', type=int, default=1500, help='Tuning timeout in seconds')
     parser.add_argument(
-        'dbms', type=str, choices={'pg', 'ms'},
-        help='Set to "pg" to tune PostgreSQL, "ms" to tune MySQL')
+        'dbms', type=str, choices={'pg', 'ms', 'md'},
+        help='Set to "pg" to tune PostgreSQL, "ms" to tune MySQL, "md" to tune MariaDB')
     parser.add_argument('db_name', type=str, help='Name of database to tune')
     parser.add_argument('db_user', type=str, help='Name of database login')
     parser.add_argument('db_pwd', type=str, help='Password for database login')

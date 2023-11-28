@@ -5,6 +5,7 @@ Created on May 12, 2021
 '''
 from dbms.postgres import PgConfig
 from dbms.mysql import MySQLconfig
+from dbms.mariadb import MariaDBconfig
 
 
 def from_file(config):
@@ -19,8 +20,10 @@ def from_file(config):
     dbms_name = config['DATABASE']['dbms']
     if dbms_name == 'pg':
         return PgConfig.from_file(config)
-    else:
+    elif dbms_name == 'ms':
         return MySQLconfig.from_file(config)
+    else:
+        return MariaDBconfig.from_file(config)
 
 
 def from_args(args):
@@ -38,6 +41,10 @@ def from_args(args):
             args.recover_cmd, args.timeout_s)
     elif args.dbms == 'ms':
         return MySQLconfig(
+            args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
+            args.recover_cmd, args.timeout_s)
+    elif args.dbms == 'md':
+        return MariaDBconfig(
             args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
             args.recover_cmd, args.timeout_s)
     else:
