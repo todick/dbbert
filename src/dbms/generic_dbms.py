@@ -9,7 +9,7 @@ import copy
 class ConfigurableDBMS(ABC):
     """ Represents a configurable database management system. """
     
-    def __init__(self, db, user, password, unit_to_size, 
+    def __init__(self, db, user, password, unit_to_size,
                  restart_cmd, recovery_cmd, timeout_s):
         """ Initialize DB connection with given credentials. 
         
@@ -138,4 +138,8 @@ class ConfigurableDBMS(ABC):
         for unit in self.unit_to_size:
             size = self.unit_to_size[unit]
             value = value.replace(unit, size)
+        try:
+            value = eval(value)
+        except SyntaxError:
+            pass
         return value

@@ -6,7 +6,6 @@ gym==0.26
 mysql-connector-python==8.1.0
 numpy==1.25.2
 pandas==1.2.2
-psycopg2==2.9.7
 PyPDF2==3.0.1
 sentence_transformers==1.1.1
 simpletransformers==0.61.4

@@ -71,12 +71,14 @@ class DocCollection():
         'question-answering', 
         model='deepset/roberta-base-squad2', 
         tokenizer='deepset/roberta-base-squad2', 
-        device=models.util.torch_device())
+        device=models.util.torch_device(),
+        padding="longest")
     zsc_pipeline = pipeline(
         'zero-shot-classification', 
         model='facebook/bart-large-mnli', 
         tokenizer='facebook/bart-large-mnli', 
-        device=models.util.torch_device())
+        device=models.util.torch_device(),
+        padding="longest")
 
     def __init__(self, docs_path, dbms:ConfigurableDBMS, 
                  size_threshold, filter_params, use_implicit):

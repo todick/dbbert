@@ -3,6 +3,7 @@ Created on Aug 15, 2023
 
 @author: immanueltrummer
 '''
+import subprocess
 from pybullet_utils.util import set_global_seeds
 
 import argparse
@@ -72,16 +73,30 @@ if __name__ == '__main__':
         default='echo "Reset database state!"; sleep 5',
         help='Command to restore default status of database system')
     parser.add_argument(
-        'query_path', type=str, default=None, 
+        '--query_path', type=str, default=None, 
         help='Path to file containing SQL queries')
     parser.add_argument(
         '--nr_runs', type=int, default=1, help='Number of benchmark runs')
     parser.add_argument(
         '--result_path_prefix', type=str, default='dbbert_results',
         help='Path prefix for files containing tuning results')
+    parser.add_argument(
+        '--benchmark_type', type=str, default='olap', choices={'olap', 'benchbase'},
+        help='The type of benchmark to run (olap or oltp)')
+    parser.add_argument(
+        '--benchmark', type=str, default='tpcc', choices={'tpcc'},
+        help='The benchmark to run (only for benchbase)')
+    parser.add_argument(
+        '--benchbase_home', type=str, default='benchbase',
+        help='Path to benchbase')
+    parser.add_argument(
+        '--benchbase_config', type=str, default=None,
+        help='Path to the benchbase config')
+    parser.add_argument(
+        '--benchbase_result', type=str, default='tpcc_results',
+        help='Path to the output file for benchbase')
     args = parser.parse_args()
     print(f'Input arguments: {args}')
-
     # Expensive import statements after parsing arguments
     from environment.zero_shot import NlpTuningEnv
     from stable_baselines3 import A2C

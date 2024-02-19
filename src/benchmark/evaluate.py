@@ -258,3 +258,127 @@ class TpcC(Benchmark):
     def _reset_db(self):
         """ Reload TPC-C database from template database. """
         self.dbms.copy_db(self.template_db, self.target_db)
+
+class Benchbase(Benchmark):
+    """ Runs benchmarks using benchbase. """
+    
+    def __init__(self, benchbase_path, config_path, result_path, benchmark, dbms):
+        """ Initialize with given paths. 
+        
+        Args:
+            benchbase_path: path to the benchbase base directory
+            config_path: path to configuration file
+            result_path: store benchmark results here
+            dbms: configurable DBMS (not the benchmark database)
+            benchbase: the benchmark to run
+        """
+        super().__init__()
+        self.benchbase_path = benchbase_path
+        self.config_path = config_path
+        self.result_path = result_path
+        self.dbms = dbms
+        self.benchmark = benchmark
+        self._init_stats()
+        self.log_path = None
+        
+    def evaluate(self):
+        """ Evaluates current configuration on TPC-C benchmark.
+        
+        Returns:
+            Dictionary containing error flag and throughput
+         """
+        self._remove_benchbase_results()
+        self.eval_ctr += 1
+        throughput = -1
+        had_error = True
+        config = self.dbms.changed() if self.dbms else None
+        if(self.benchmark == "tpcc"):
+            try:
+                # Run benchmark                
+                print(f'Starting tpcc benchmark.')
+                return_code = subprocess.run(\
+                    ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
+                    '--execute=true', '-s', '120', '-d', self.result_path],
+                    cwd = self.benchbase_path)
+                print(f'Benchmark return code: {return_code}')
+
+                # Extract throughput from generated files
+                results_file = max(glob.iglob(f'{self.result_path}/*.results.csv'), key=os.path.getctime)
+                df = pd.read_csv(results_file)
+                throughput = df['Throughput (requests/second)'].median()
+                if not math.isnan(throughput):
+                    print(f'Measured valid throughput: {throughput}')
+                    had_error = False
+                else:
+                    print(f'Error - throughput is NaN!')
+
+                # Check for MySQL specific read-only flags (if activated, 
+                # OLTP benchmark reports large throughput due to exceptions).
+                ms_ro_flags = ['read_only', 'super_read_only', 
+                               'transaction_read_only', 'innodb_read_only']
+                true_ro_flags = [f for f in ms_ro_flags 
+                                 if f in config and str(config[f]) == '1']
+                if true_ro_flags:
+                    print('MS Read-only flags set - do not count throughput')
+                    had_error = True
+            except (Exception, psycopg2.DatabaseError) as e:
+                print(f'Exception for TPC-C: {e}')
+            # Update statistics
+            if not had_error:
+                if throughput > self.max_throughput:
+                    self.max_throughput = throughput
+                    self.max_config = config
+                if throughput < self.min_throughput:
+                    self.min_throughput = throughput
+                    self.min_config = config
+            # Logging
+            self.print_stats()
+            self._log(self.max_throughput, self.max_config, throughput, config)
+            return {'error': had_error, 'throughput': throughput}
+        else:
+            raise ValueError(f'{self.benchmark} is currently not supported')
+    
+    def print_stats(self):
+        """ Print out benchmark statistics. """
+        if(self.benchmark == "tpcc"):
+            print(f'Minimal throughput {self.min_throughput} with configuration {self.min_config}')
+            print(f'Maximal throughput {self.max_throughput} with configuration {self.max_config}')
+        else:
+            raise ValueError(f'{self.benchmark} is currently not supported')        
+        
+    def reset(self, log_path, run_ctr):
+        """ Reset database along with logging and statistics. """
+        self._reset_db()
+        super().reset(log_path, run_ctr)
+        
+    def _init_stats(self):
+        """ Reset minimal and maximal throughput (and configurations). """
+        if(self.benchmark == "tpcc"):
+            self.min_throughput = float('inf')
+            self.min_config = {}
+            self.max_throughput = 0
+            self.max_config = {}
+        else:
+            raise ValueError(f'{self.benchmark} is currently not supported')
+        
+        
+    def _remove_benchbase_results(self):
+        """ Removes old result files from Benchbase benchmark. """
+        files = glob.glob(f'{self.result_path}/*')
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError as e:
+                print("Error: %s : %s" % (f, e.strerror))
+
+    def _reset_db(self):
+        """ Reload TPC-C database. """
+        if(self.benchmark == "tpcc"):
+            print(f'Resetting benchmark database.')
+            return_code = subprocess.run(\
+                ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
+                '--create=true', '--load=true'],
+                cwd = self.benchbase_path)
+            print(f'Reset return code: {return_code}')
+        else:
+            raise ValueError(f'{self.benchmark} is currently not supported')

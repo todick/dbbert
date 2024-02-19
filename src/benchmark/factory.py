@@ -44,21 +44,23 @@ def from_args(args, dbms):
     Returns:
         tuple of optimization objective and benchmark.
     """
-    if args.query_path is not None:
-        # Tune for minimizing run time of given workload
-        objective = search.objectives.Objective.TIME
-        bench = benchmark.evaluate.OLAP(dbms, args.query_path)
+    if args.benchmark_type == 'olap':
+        if args.query_path is not None:
+            # Tune for minimizing run time of given workload
+            objective = search.objectives.Objective.TIME
+            bench = benchmark.evaluate.OLAP(dbms, args.query_path)
+            return objective, bench
+        else:
+            raise ValueError('OLAP style benchmarks need to have query path specified!')
+    elif args.benchmark_type == 'benchbase':
+        objective = search.objectives.Objective.THROUGHPUT
+        benchbase_home = args.benchbase_home
+        benchbase_config = args.benchbase_config
+        benchbase_result = args.benchbase_result
+        benchmark_name = args.benchmark
+        bench = benchmark.evaluate.Benchbase(
+            benchbase_home, benchbase_config, benchbase_result, 
+            benchmark_name, dbms)
         return objective, bench
-    else:
-        raise ValueError('This re-implementation does not yet support OLTP!')
-
-        # oltp_home = get_value(config, 'BENCHMARK', 'oltp_home', '')
-        # oltp_config = get_value(config, 'BENCHMARK', 'oltp_config', '')
-        # template_db = get_value(config, 'DATABASE', 'template_db', '')
-        # target_db = get_value(config, 'DATABASE', 'target_db', '')
-        # reset_every = int(get_value(config, 'BENCHMARK', 'reset_every', 10))
-        # oltp_result = pathlib.Path(oltp_home).joinpath('results')
-        # objective = search.objectives.Objective.THROUGHPUT
-        # bench = benchmark.evaluate.TpcC(
-            # oltp_home, oltp_config, oltp_result, 
-            # dbms, template_db, target_db, reset_every)
+    else: 
+        raise ValueError('OLTP style benchmarks are not supported!')
