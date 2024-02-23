@@ -23,8 +23,8 @@ class PgConfig(ConfigurableDBMS):
             recovery_cmd: command for recovering DB
             timeout_s: per-query timeout in seconds
         """
-        unit_to_size={'KB':'kB', 'MB':'MB', 'GB':'GB',
-                      'K':'kB', 'M':'MB', 'G':'GB'}
+        unit_to_size={'KB':'*1024', 'MB':'*1024*1024', 'GB':'*1024*1024*1024',
+                      'K':'*1024', 'M':'*1024*1024', 'G':'*1024*1024*1024'}
         super().__init__(db, user, password, unit_to_size, 
                          restart_cmd, recovery_cmd, timeout_s)
         self.all_variables = self._query_params()
