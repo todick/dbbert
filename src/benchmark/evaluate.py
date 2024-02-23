@@ -12,6 +12,7 @@ import pandas as pd
 import psycopg2
 import subprocess
 import time
+import json
 from dbms.generic_dbms import ConfigurableDBMS
 
 class Benchmark(ABC):
@@ -277,8 +278,10 @@ class Benchbase(Benchmark):
         self.config_path = config_path
         self.result_path = result_path
         self.dbms = dbms
+        self.template_db = "benchbase_template"
+        self.target_db = "benchbase"
         self.benchmark = benchmark
-        self._init_stats()
+        self._init_stats()        
         self.log_path = None
         
     def evaluate(self):
@@ -290,66 +293,87 @@ class Benchbase(Benchmark):
         self._remove_benchbase_results()
         self.eval_ctr += 1
         throughput = -1
+        time = -1
         had_error = True
         config = self.dbms.changed() if self.dbms else None
-        if(self.benchmark == "tpcc"):
-            try:
-                # Run benchmark                
-                print(f'Starting tpcc benchmark.')
-                return_code = subprocess.run(\
-                    ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
-                    '--execute=true', '-s', '120', '-d', self.result_path],
-                    cwd = self.benchbase_path)
-                print(f'Benchmark return code: {return_code}')
-
-                # Extract throughput from generated files
-                results_file = max(glob.iglob(f'{self.result_path}/*.results.csv'), key=os.path.getctime)
-                df = pd.read_csv(results_file)
-                throughput = df['Throughput (requests/second)'].median()
+        # Code should be reusable for throughput-based benchmarks
+        try:
+            # Run benchmark                
+            print(f'Starting {self.benchmark} benchmark.')
+            return_code = subprocess.run(\
+                ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
+                '--execute=true', '-s', '120', '-d', self.result_path],
+                cwd = self.benchbase_path)
+            print(f'Benchmark return code: {return_code}')
+            
+            # Extract throughput from generated files
+            results_file = max(glob.iglob(f'{self.result_path}/*.summary.json'), key=os.path.getctime)
+            df = open(results_file)
+            
+            # Throughput based benchmarks
+            if(self.benchmark == "tpcc"):
+                throughput = float(json.load(df)['Throughput (requests/second)'])
                 if not math.isnan(throughput):
                     print(f'Measured valid throughput: {throughput}')
                     had_error = False
                 else:
                     print(f'Error - throughput is NaN!')
-
-                # Check for MySQL specific read-only flags (if activated, 
-                # OLTP benchmark reports large throughput due to exceptions).
-                ms_ro_flags = ['read_only', 'super_read_only', 
-                               'transaction_read_only', 'innodb_read_only']
-                true_ro_flags = [f for f in ms_ro_flags 
-                                 if f in config and str(config[f]) == '1']
-                if true_ro_flags:
-                    print('MS Read-only flags set - do not count throughput')
-                    had_error = True
-            except (Exception, psycopg2.DatabaseError) as e:
-                print(f'Exception for TPC-C: {e}')
-            # Update statistics
-            if not had_error:
-                if throughput > self.max_throughput:
-                    self.max_throughput = throughput
-                    self.max_config = config
-                if throughput < self.min_throughput:
-                    self.min_throughput = throughput
-                    self.min_config = config
-            # Logging
-            self.print_stats()
-            self._log(self.max_throughput, self.max_config, throughput, config)
-            return {'error': had_error, 'throughput': throughput}
-        else:
-            raise ValueError(f'{self.benchmark} is currently not supported')
+                if not had_error:
+                    if throughput > self.max_throughput:
+                        self.max_throughput = throughput
+                        self.max_config = config
+                    if throughput < self.min_throughput:
+                        self.min_throughput = throughput
+                        self.min_config = config
+                # Logging
+                self.print_stats()
+                self._log(self.max_throughput, self.max_config, throughput, config)
+                return {'error': had_error, 'throughput': throughput}
+            
+            # Time-based benchmarks
+            elif(self.benchmark == "tpch"):
+                time = float(json.load(df)['Elapsed Time (nanoseconds)']) / 1000000000.0
+                if not math.isnan(time):
+                    print(f'Measured valid time: {time}')
+                    had_error = False
+                else:
+                    print(f'Error - time is NaN!')
+                if not had_error:
+                    if time > self.max_time:
+                        self.max_time = time
+                        self.max_config = config
+                    if time < self.min_time:
+                        self.min_time = time
+                        self.min_config = config
+                # Logging
+                self.print_stats()
+                self._log(self.min_time, self.min_config, time, config)
+                return {'error': had_error, 'time': time}
+            else:
+                raise ValueError(f'{self.benchmark} is currently not supported')
+        except (Exception, psycopg2.DatabaseError) as e:
+            print(f'Exception for {self.benchmark}: {e}')
+            if(self.benchmark == "tpcc"):
+                self.print_stats()
+                self._log(self.max_throughput, self.max_config, throughput, config)
+                return {'error': had_error, 'throughput': throughput}
+            elif(self.benchmark == "tpch"):
+                self.print_stats()
+                self._log(self.min_time, self.min_config, time, config)
+                return {'error': had_error, 'time': time}
+            else:
+                raise ValueError(f'{self.benchmark} is currently not supported')
     
     def print_stats(self):
         """ Print out benchmark statistics. """
         if(self.benchmark == "tpcc"):
             print(f'Minimal throughput {self.min_throughput} with configuration {self.min_config}')
             print(f'Maximal throughput {self.max_throughput} with configuration {self.max_config}')
+        elif(self.benchmark == "tpch"):
+            print(f'Minimal time {self.min_time} with configuration {self.min_config}')
+            print(f'Maximal time {self.max_time} with configuration {self.max_config}')    
         else:
             raise ValueError(f'{self.benchmark} is currently not supported')        
-        
-    def reset(self, log_path, run_ctr):
-        """ Reset database along with logging and statistics. """
-        self._reset_db()
-        super().reset(log_path, run_ctr)
         
     def _init_stats(self):
         """ Reset minimal and maximal throughput (and configurations). """
@@ -357,6 +381,11 @@ class Benchbase(Benchmark):
             self.min_throughput = float('inf')
             self.min_config = {}
             self.max_throughput = 0
+            self.max_config = {}
+        elif(self.benchmark == "tpch"):
+            self.min_time = float('inf')
+            self.min_config = {}
+            self.max_time = 0
             self.max_config = {}
         else:
             raise ValueError(f'{self.benchmark} is currently not supported')
@@ -370,15 +399,3 @@ class Benchbase(Benchmark):
                 os.remove(f)
             except OSError as e:
                 print("Error: %s : %s" % (f, e.strerror))
-
-    def _reset_db(self):
-        """ Reload TPC-C database. """
-        if(self.benchmark == "tpcc"):
-            print(f'Resetting benchmark database.')
-            return_code = subprocess.run(\
-                ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
-                '--create=true', '--load=true'],
-                cwd = self.benchbase_path)
-            print(f'Reset return code: {return_code}')
-        else:
-            raise ValueError(f'{self.benchmark} is currently not supported')

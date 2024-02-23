@@ -82,9 +82,9 @@ if __name__ == '__main__':
         help='Path prefix for files containing tuning results')
     parser.add_argument(
         '--benchmark_type', type=str, default='olap', choices={'olap', 'benchbase'},
-        help='The type of benchmark to run (olap or oltp)')
+        help='The type of benchmark to run (olap or benchbase)')
     parser.add_argument(
-        '--benchmark', type=str, default='tpcc', choices={'tpcc'},
+        '--benchmark', type=str, default='tpcc', choices={'tpcc','tpch'},
         help='The benchmark to run (only for benchbase)')
     parser.add_argument(
         '--benchbase_home', type=str, default='benchbase',

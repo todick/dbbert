@@ -53,7 +53,10 @@ def from_args(args, dbms):
         else:
             raise ValueError('OLAP style benchmarks need to have query path specified!')
     elif args.benchmark_type == 'benchbase':
-        objective = search.objectives.Objective.THROUGHPUT
+        if(args.benchmark == "tpcc"):
+            objective = search.objectives.Objective.THROUGHPUT
+        else:
+            objective = search.objectives.Objective.TIME
         benchbase_home = args.benchbase_home
         benchbase_config = args.benchbase_config
         benchbase_result = args.benchbase_result

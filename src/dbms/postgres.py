@@ -23,10 +23,11 @@ class PgConfig(ConfigurableDBMS):
             recovery_cmd: command for recovering DB
             timeout_s: per-query timeout in seconds
         """
-        unit_to_size={'KB':'kB', 'MB':'000kB', 'GB':'000000kB',
-                      'K':'kB', 'M':'000kB', 'G':'000000kB'}
+        unit_to_size={'KB':'kB', 'MB':'MB', 'GB':'GB',
+                      'K':'kB', 'M':'MB', 'G':'GB'}
         super().__init__(db, user, password, unit_to_size, 
                          restart_cmd, recovery_cmd, timeout_s)
+        self.all_variables = self._query_params()
         
     @classmethod
     def from_file(cls, config):
@@ -80,6 +81,7 @@ class PgConfig(ConfigurableDBMS):
             if self.failed_connections < 3:
                 print(f'Trying recovery with "{self.recovery_cmd}" ...')
                 os.system(self.recovery_cmd)
+                self.reset_config()
                 self.reconfigure()
             return False
         
@@ -89,14 +91,18 @@ class PgConfig(ConfigurableDBMS):
             print('Disconnecting ...')
             self.connection.close()
 
-    def all_params(self):
-        """ Return names of all tuning parameters. """
+    def _query_params(self):
+        """ Queries names of all tuning parameters. """
         cursor = self.connection.cursor()
         cursor.execute("select name from pg_settings " \
                        "where vartype in ('bool', 'integer', 'real')")
         var_vals = cursor.fetchall()
         cursor.close()
         return [v[0] for v in var_vals]
+
+    def all_params(self):
+        """ Return names of all tuning parameters. """
+        return self.all_variables
                         
     def exec_file(self, path):
         """ Executes all SQL queries in given file and returns error flag. """
@@ -135,7 +141,7 @@ class PgConfig(ConfigurableDBMS):
     
     def is_param(self, param):
         """ Returns True iff given parameter exists. """
-        return self.can_query(f'show {param}')
+        return param in self.all_variables
         
     def get_value(self, param):
         """ Get current value of given parameter. """
