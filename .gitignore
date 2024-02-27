@@ -9,6 +9,7 @@ local.properties
 .settings/
 .loadpath
 .recommenders
+__pycache__/
 
 # External tool builders
 .externalToolBuilders/

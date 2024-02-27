@@ -173,3 +173,26 @@ class PgConfig(ConfigurableDBMS):
         time.sleep(3)
         success = self._connect()
         return success    
+    
+    def _transform_val(self, value: str):
+        """ Transforms parameter values using heuristic. """
+        changes_made = False
+        for unit in self.unit_to_size:
+            size = self.unit_to_size[unit]
+            if (unit in value):
+                value = value.replace(unit, size)
+                changes_made = True
+        if(changes_made):
+            # We only convert units if there was a unit in the string before conversion,
+            # since some parameters interpret integers as a certain unit by default
+            try:
+                size = int(eval(value))
+                if (size % pow(1024,3) == 0):
+                    return str(int(size/pow(1024,3))) + 'GB'
+                elif (size % pow(1024,2) == 0):
+                    return str(int(size/pow(1024,2))) + 'MB'
+                elif (size % 1024 == 0):
+                    return str(int(size/1024)) + 'kB'
+            except SyntaxError:
+                pass
+        return value
