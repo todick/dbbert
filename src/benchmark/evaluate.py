@@ -308,11 +308,11 @@ class Benchbase(Benchmark):
             
             # Extract throughput from generated files
             results_file = max(glob.iglob(f'{self.result_path}/*.summary.json'), key=os.path.getctime)
-            df = open(results_file)
+            results = json.load(open(results_file))
             
             # Throughput based benchmarks
             if(self.benchmark == "tpcc"):
-                throughput = float(json.load(df)['Throughput (requests/second)'])
+                throughput = results['Throughput (requests/second)']
                 if not math.isnan(throughput):
                     print(f'Measured valid throughput: {throughput}')
                     had_error = False
@@ -332,12 +332,12 @@ class Benchbase(Benchmark):
             
             # Time-based benchmarks
             elif(self.benchmark == "tpch"):
-                time = float(json.load(df)['Elapsed Time (nanoseconds)']) / 1000000000.0
+                time = results['Latency Distribution']['Average Latency (microseconds)'] / 1000000.0
                 if not math.isnan(time):
-                    print(f'Measured valid time: {time}')
+                    print(f'Measured average latency: {time}')
                     had_error = False
                 else:
-                    print(f'Error - time is NaN!')
+                    print(f'Error - latency is NaN!')
                 if not had_error:
                     if time > self.max_time:
                         self.max_time = time
