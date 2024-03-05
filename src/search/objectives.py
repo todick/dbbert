@@ -32,6 +32,6 @@ def calculate_reward(metrics, default_metrics, objective):
         return -10000
     else:
         if objective == Objective.TIME:
-            return default_metrics['time'] - metrics['time']
+            return (default_metrics['time'] - metrics['time']) * 100 / default_metrics['time']
         elif objective == Objective.THROUGHPUT:
-            return metrics['throughput'] - default_metrics['throughput']
+            return (metrics['throughput'] - default_metrics['throughput']) * 100 / default_metrics['throughput']
