@@ -152,9 +152,11 @@ class ParameterExplorer():
             print(f'Trying configuration: {config}')
             for param, value in config.items():
                 self.dbms.set_param_smart(param, value)
-            self.dbms.reconfigure()
-            metrics = self.benchmark.evaluate()
-            reward = calculate_reward(metrics, self.def_metrics, self.objective)
+            if self.dbms.reconfigure():
+                metrics = self.benchmark.evaluate()
+                reward = calculate_reward(metrics, self.def_metrics, self.objective)
+            else: 
+                reward = -10000
             print(f'Reward {reward} with {config}')
             return reward
         else:

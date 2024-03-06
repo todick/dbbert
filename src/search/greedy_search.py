@@ -79,7 +79,8 @@ class GreedyParameterExplorer():
             self._evaluate_parameters(best_config)
         return max_reward, best_config
 
-    def _evaluate_parameters(self, best_config):
+    def _evaluate_parameters(self, best_config):            
+        print('Benchmarking parameters individually')  
         # Evaluate parameters
         for p, val in best_config.items():
             reward = self._evaluate_config({p : val})
@@ -87,10 +88,12 @@ class GreedyParameterExplorer():
                 self.tested_parameters[p].add_result(val, reward)
             else:
                 self.tested_parameters[p] = ParameterResults(val, reward)
+            print(f'Obtained {reward} by setting {p} to {val}')
         # Update selected parameters
         for p, res in self.tested_parameters.items():
             if res.best_reward > 5: # Ignore parameters with an individual improvement of less than 5%
-                self.selected_parameters.update(p, res.best_value)           
+                self.selected_parameters.update(p, res.best_value)         
+        print(f'Selected parameters: {self.selected_parameters}')  
 
     def _select_configs(self, hint_to_weight, nr_evals):
         """ Returns set of interesting configurations, based on hints. 
@@ -184,9 +187,11 @@ class GreedyParameterExplorer():
             print(f'Trying configuration: {config}')
             for param, value in config.items():
                 self.dbms.set_param_smart(param, value)
-            self.dbms.reconfigure()
-            metrics = self.benchmark.evaluate()
-            reward = calculate_reward(metrics, self.def_metrics, self.objective)
+            if self.dbms.reconfigure():
+                metrics = self.benchmark.evaluate()
+                reward = calculate_reward(metrics, self.def_metrics, self.objective)
+            else: 
+                reward = -10000
             print(f'Reward {reward} with {config}')
             return reward
         else:
