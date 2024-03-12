@@ -10,10 +10,10 @@ from parameters.util import is_numerical, convert_to_bytes
 from search.objectives import calculate_reward
 
 class ParameterResults():
-    def __init__(self, value, reward):
-        self.best_value = value
-        self.best_reward = reward
-        self.tested_values = {value : reward}
+    def __init__(self):
+        self.best_value = 0
+        self.best_reward = -float('inf')
+        self.tested_values = {}
         
     def add_result(self, value, reward):
         self.tested_values[value] = reward
@@ -22,7 +22,7 @@ class ParameterResults():
             self.best_reward = reward
             
     def has_value(self, value):
-        return value in list(self.tested_values.keys())
+        return value in self.tested_values
 
 class GreedyParameterExplorer():
     """ Explores the parameter space using previously collected tuning hints. """
@@ -39,19 +39,23 @@ class GreedyParameterExplorer():
         self.benchmark = benchmark
         self.def_metrics = self._def_conf_metrics()
         self.objective = objective
+        self.max_reward = 0
         self.tested_parameters = {}
-        self.selected_parameters = {}
 
     def _def_conf_metrics(self):
         """ Returns metrics for running benchmark with default configuration. """
         if self.dbms and self.benchmark:
             self.dbms.reset_config()
-            self.dbms.reconfigure()
-            def_metrics = self.benchmark.evaluate()
+            self.dbms.reconfigure() 
+            for _ in range(2):
+                # This value is taken as a reference to evaluate later configurations, so we run the
+                # benchmark twice times and take the second result to account for caching and engine
+                # optimizers. It is better for the performance to be estimated too fast than too slow
+                res = self.benchmark.evaluate() 
+            return res
         else:
             print('Warning: no DBMS or benchmark specified for parameter exploration.')
-            def_metrics = {'error': False, 'time': 0}
-        return def_metrics
+            return {'error': False, 'time': 0}
         
     def explore(self, hint_to_weight, nr_evals):
         """ Explore parameters to improve benchmark performance.
@@ -75,25 +79,38 @@ class GreedyParameterExplorer():
                 max_reward = reward
                 best_config = config
         print(f'Obtained {max_reward} by configuration {best_config}')
-        if max_reward > 0:
-            self._evaluate_parameters(best_config)
+        if max_reward > self.max_reward:
+            self.max_reward = max_reward
+            self._evaluate_parameters(best_config)    
+        recommended_config = {}
+        self._include_tested_parameters(recommended_config)
+        if len(recommended_config) > 1:
+            self._evaluate_config(recommended_config)
         return max_reward, best_config
 
     def _evaluate_parameters(self, best_config):            
         print('Benchmarking parameters individually')  
         # Evaluate parameters
         for p, val in best_config.items():
-            reward = self._evaluate_config({p : val})
-            if p in self.tested_parameters and not self.tested_parameters[p].has_value(val):
-                self.tested_parameters[p].add_result(val, reward)
+            if p in self.tested_parameters:
+                if self.tested_parameters[p].has_value(val):
+                    continue
             else:
-                self.tested_parameters[p] = ParameterResults(val, reward)
+                self.tested_parameters[p] = ParameterResults()
+            reward = self._evaluate_config({p : val})
+            self.tested_parameters[p].add_result(val, reward)
             print(f'Obtained {reward} by setting {p} to {val}')
-        # Update selected parameters
+
+    def _include_tested_parameters(self, config):
         for p, res in self.tested_parameters.items():
-            if res.best_reward > 5: # Ignore parameters with an individual improvement of less than 5%
-                self.selected_parameters.update(p, res.best_value)         
-        print(f'Selected parameters: {self.selected_parameters}')  
+            if p in config:
+                if config[p] in res.tested_values and res.tested_values[config[p]] < 2:
+                    # Exclude parameter settings that we know affect performance negatively
+                    config.pop(p)
+            else:
+                if res.best_reward > 2:
+                    # Include parameter settings that we know affect performance positively
+                   config[p] = res.best_value 
 
     def _select_configs(self, hint_to_weight, nr_evals):
         """ Returns set of interesting configurations, based on hints. 
@@ -108,13 +125,15 @@ class GreedyParameterExplorer():
         param_to_w_vals = self._gather_values(hint_to_weight)
         configs = []
         for _ in range(nr_evals):
-            config = self._next_config(configs, param_to_w_vals)
+            config = self._next_config(configs, param_to_w_vals)  
             configs.append(config)
+        for config in configs:            
+            self._include_tested_parameters(config)      
         return configs
          
     def _next_config(self, configs, param_to_w_vals):
         """ Select most interesting configuration to try next. """
-        config = self.selected_values.copy()
+        config = {}
         for p, w_vals in param_to_w_vals.items():
             ref_vals = [c[p] for c in configs]
             vals = [v for v, _ in w_vals]

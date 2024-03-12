@@ -13,7 +13,7 @@ import gym.spaces
 import models.util
 import numpy as np
 import pandas as pd
-import search.search_with_hints
+import search.greedy_search
 import transformers
 import typing
 
@@ -101,7 +101,7 @@ class NlpTuningEnv(gym.Env):
         self.nr_evals = nr_evals
         self.scale_perf = scale_perf
         self.scale_asg = scale_asg
-        self.explorer = search.search_with_hints.ParameterExplorer(
+        self.explorer = search.greedy_search.GreedyParameterExplorer(
             dbms, benchmark, objective)
         self.decision = DecisionType.PICK_FACTOR
         self.factors = [0.25, 0.5, 1, 2, 4]
