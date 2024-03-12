@@ -61,9 +61,11 @@ def from_args(args, dbms):
         benchbase_config = args.benchbase_config
         benchbase_result = args.benchbase_result
         benchmark_name = args.benchmark
+        timeout = args.benchbase_timeout
+        
         bench = benchmark.evaluate.Benchbase(
             benchbase_home, benchbase_config, benchbase_result, 
-            benchmark_name, dbms)
+            benchmark_name, timeout, dbms)
         return objective, bench
     else: 
         raise ValueError('OLTP style benchmarks are not supported!')

@@ -95,6 +95,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--benchbase_result', type=str, default='tpcc_results',
         help='Path to the output file for benchbase')
+    parser.add_argument(
+        '--benchbase_timeout', type=int, default=300,
+        help='Timeout for benchbase benchmarks in seconds')
     args = parser.parse_args()
     print(f'Input arguments: {args}')
     # Expensive import statements after parsing arguments

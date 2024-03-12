@@ -150,7 +150,7 @@ class TpcC(Benchmark):
     """ Runs the TPC-C benchmark. """
     
     def __init__(self, oltp_path, config_path, result_path, 
-                 dbms, template_db, target_db, reset_every):
+                 dbms, template_db, target_db, reset_every, timeout):
         """ Initialize with given paths. 
         
         Args:
@@ -194,7 +194,7 @@ class TpcC(Benchmark):
             return_code = subprocess.run(\
                 ['./oltpbenchmark', '-b', 'tpcc', '-c', self.config_path,
                 '--execute=true', '-s', '120', '-o', 'tuningtest'],
-                cwd = self.oltp_path)
+                cwd = self.oltp_path, timeout=self.timeout)
             print(f'Benchmark return code: {return_code}')
             
             # Extract throughput from generated files
@@ -263,7 +263,7 @@ class TpcC(Benchmark):
 class Benchbase(Benchmark):
     """ Runs benchmarks using benchbase. """
     
-    def __init__(self, benchbase_path, config_path, result_path, benchmark, dbms):
+    def __init__(self, benchbase_path, config_path, result_path, benchmark, timeout, dbms):
         """ Initialize with given paths. 
         
         Args:
@@ -281,6 +281,7 @@ class Benchbase(Benchmark):
         self.template_db = "benchbase_template"
         self.target_db = "benchbase"
         self.benchmark = benchmark
+        self.timeout = timeout
         self._init_stats()        
         self.log_path = None
         
@@ -302,8 +303,8 @@ class Benchbase(Benchmark):
             print(f'Starting {self.benchmark} benchmark.')
             return_code = subprocess.run(\
                 ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
-                '--execute=true', '-s', '120', '-d', self.result_path],
-                cwd = self.benchbase_path)
+                '--execute=true', '-d', self.result_path],
+                cwd = self.benchbase_path, timeout=self.timeout)
             print(f'Benchmark return code: {return_code}')
             
             # Extract throughput from generated files
