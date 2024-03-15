@@ -37,7 +37,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--timeout_s', type=int, default=1500, help='Tuning timeout in seconds')
     parser.add_argument(
-        '--performance_scaling', type=float, default=0.1,
+        '--performance_scaling', type=float, default=10.0,
         help='Scaling factor for performance-related rewards')
     parser.add_argument(
         '--assignment_scaling', type=float, default=1.0,
