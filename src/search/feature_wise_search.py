@@ -8,6 +8,7 @@ from dbms.generic_dbms import ConfigurableDBMS
 from benchmark.evaluate import Benchmark
 from parameters.util import is_numerical, convert_to_bytes
 from search.objectives import calculate_reward
+from search.search_with_hints import ParameterExplorer
 
 class ParameterResults():
     def __init__(self):
@@ -24,7 +25,7 @@ class ParameterResults():
     def has_value(self, value):
         return value in self.tested_values
 
-class GreedyParameterExplorer():
+class FeatureWiseExplorer(ParameterExplorer):
     """ Explores the parameter space using previously collected tuning hints. """
 
     def __init__(self, dbms: ConfigurableDBMS, benchmark: Benchmark, objective):
@@ -35,10 +36,7 @@ class GreedyParameterExplorer():
             benchmark: optimize parameters for this benchmark.
             objective: goal of parameter optimization.
         """
-        self.dbms = dbms
-        self.benchmark = benchmark
-        self.def_metrics = self._def_conf_metrics()
-        self.objective = objective
+        super().__init__(dbms, benchmark)
         self.max_reward = 0
         self.tested_parameters = {}
 
@@ -129,89 +127,4 @@ class GreedyParameterExplorer():
             configs.append(config)
         for config in configs:            
             self._include_tested_parameters(config)      
-        return configs
-         
-    def _next_config(self, configs, param_to_w_vals):
-        """ Select most interesting configuration to try next. """
-        config = {}
-        for p, w_vals in param_to_w_vals.items():
-            ref_vals = [c[p] for c in configs]
-            vals = [v for v, _ in w_vals]
-            min_dist = float('inf')
-            best_val = vals[0]
-            for val in vals:
-                exp_refs = ref_vals + [val]
-                exp_dist = self._max_min_distance(w_vals, exp_refs)
-                if exp_dist < min_dist:
-                    min_dist = exp_dist
-                    best_val = val
-            config[p] = best_val
-        return config
-         
-    def _max_min_distance(self, weighted_values, ref_vals):
-        """ Returns maximum of minimal distances to reference values. """
-        return max([w * self._min_distance(v, ref_vals) for v, w in weighted_values])
-        
-    def _min_distance(self, value, ref_vals):
-        """ Returns minimum distance to value over all reference values. """
-        return min([self._distance(value, r) for r in ref_vals])
-        
-    def _distance(self, value_1, value_2):
-        """ Calculate raw distance between two assignments for same value. 
-        
-        Args:
-            value_1: first assignment value
-            value_2: second assignment value
-            
-        Returns:
-            distance between assignment values
-        """
-        if value_1 == value_2:
-            return 0
-        elif is_numerical(value_1) and is_numerical(value_2):
-            bytes_1 = convert_to_bytes(value_1)
-            bytes_2 = convert_to_bytes(value_2)
-            if bytes_1 is not None and bytes_2 is not None:
-                return abs(bytes_1 - bytes_2)
-            else:
-                return 1000
-        else:
-            return 10000       
-        
-    def _gather_values(self, hint_to_weight):
-        """ Gather weighted value suggestions for the same parameter.
-        
-        Args:
-            hint_to_weight: maps parameter-value assignments to weights
-        
-        Returns:
-            Dictionary mapping parameters to lists of value-weight pairs
-        """
-        param_to_vals = defaultdict(lambda: [])
-        for (param, value), weight in hint_to_weight.items():
-            param_to_vals[param] += [(value, weight)]
-        return param_to_vals
-    
-    def _evaluate_config(self, config):
-        """ Evaluates given configuration and returns duration in milliseconds. 
-        
-        Args:
-            config: dictionary mapping parameters to values
-        
-        Returns:
-            Improvement over default configuration in milliseconds.
-        """
-        if self.dbms:
-            self.dbms.reset_config()
-            print(f'Trying configuration: {config}')
-            for param, value in config.items():
-                self.dbms.set_param_smart(param, value)
-            if self.dbms.reconfigure():
-                metrics = self.benchmark.evaluate()
-                reward = calculate_reward(metrics, self.def_metrics, self.objective)
-            else: 
-                reward = -10000
-            print(f'Reward {reward} with {config}')
-            return reward
-        else:
-            return 0
+        return configs      
