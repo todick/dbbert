@@ -6,6 +6,7 @@ Created on May 12, 2021
 from dbms.postgres import PgConfig
 from dbms.mysql import MySQLconfig
 from dbms.mariadb import MariaDBconfig
+from dbms.cockroach import CockroachConfig
 
 
 def from_file(config):
@@ -22,8 +23,12 @@ def from_file(config):
         return PgConfig.from_file(config)
     elif dbms_name == 'ms':
         return MySQLconfig.from_file(config)
-    else:
+    elif dbms_name == 'md':
         return MariaDBconfig.from_file(config)
+    elif dbms_name == 'cr':
+        return CockroachConfig.from_file(config)
+    else:        
+        raise ValueError(f'DBMS {dbms_name} is not supported!')
 
 
 def from_args(args):
@@ -47,5 +52,9 @@ def from_args(args):
         return MariaDBconfig(
             args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
             args.recover_cmd, args.timeout_s)
+    elif args.dbms == 'cr':
+        return CockroachConfig(
+            args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
+            args.recover_cmd, args.timeout_s)
     else:
-        raise ValueError(f'DBMS {args.dbms} not supported!')
+        raise ValueError(f'DBMS {args.dbms} is not supported!')

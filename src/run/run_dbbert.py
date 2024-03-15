@@ -60,8 +60,8 @@ if __name__ == '__main__':
     parser.add_argument(
         'cores', type=int, default=8, help='Number of cores of target system')
     parser.add_argument(
-        'dbms', type=str, choices={'pg', 'ms', 'md'},
-        help='Set to "pg" to tune PostgreSQL, "ms" to tune MySQL, "md" to tune MariaDB')
+        'dbms', type=str, choices={'pg', 'ms', 'md', 'cr'},
+        help='Set to "pg" to tune PostgreSQL, "ms" to tune MySQL, "md" to tune MariaDB, "cr" to tune CockroachDB')
     parser.add_argument('db_name', type=str, help='Name of database to tune')
     parser.add_argument('db_user', type=str, help='Name of database login')
     parser.add_argument('db_pwd', type=str, help='Password for database login')
