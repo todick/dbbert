@@ -23,7 +23,8 @@ def google_query(query_one, api_key, cse_id):
         query_results = query_service.cse().list(
             q=query_one, cx=cse_id, start=start, lr='lang_en', 
             dateRestrict='y1').execute()
-        all_results += query_results['items']
+        if 'items' in query_results:
+            all_results += query_results['items']
     return all_results
 
 def get_web_text(url):
