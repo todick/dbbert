@@ -10,7 +10,7 @@ class ConfigurableDBMS(ABC):
     """ Represents a configurable database management system. """
     
     def __init__(self, db, user, password, unit_to_size,
-                 restart_cmd, recovery_cmd, timeout_s):
+                 restart_cmd, recovery_cmd, timeout_s = 300):
         """ Initialize DB connection with given credentials. 
         
         Args:

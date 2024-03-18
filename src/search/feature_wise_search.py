@@ -1,13 +1,5 @@
-'''
-Created on Apr 16, 2021
-
-@author: immanueltrummer
-'''
-from collections import defaultdict
 from dbms.generic_dbms import ConfigurableDBMS
 from benchmark.evaluate import Benchmark
-from parameters.util import is_numerical, convert_to_bytes
-from search.objectives import calculate_reward
 from search.search_with_hints import ParameterExplorer
 
 class ParameterResults():

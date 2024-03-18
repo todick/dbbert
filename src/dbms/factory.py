@@ -43,18 +43,18 @@ def from_args(args):
     if args.dbms == 'pg':
         return PgConfig(
             args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
-            args.recover_cmd, args.timeout_s)
+            args.recover_cmd)
     elif args.dbms == 'ms':
         return MySQLconfig(
             args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
-            args.recover_cmd, args.timeout_s)
+            args.recover_cmd)
     elif args.dbms == 'md':
         return MariaDBconfig(
             args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
-            args.recover_cmd, args.timeout_s)
+            args.recover_cmd)
     elif args.dbms == 'cr':
         return CockroachConfig(
             args.db_name, args.db_user, args.db_pwd, args.restart_cmd, 
-            args.recover_cmd, args.timeout_s)
+            args.recover_cmd)
     else:
         raise ValueError(f'DBMS {args.dbms} is not supported!')
