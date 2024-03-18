@@ -12,7 +12,7 @@ class PgConfig(ConfigurableDBMS):
     """ Reconfigurable Postgres DBMS instance. """
     
     def __init__(self, db, user, password, restart_cmd, 
-                 recovery_cmd, timeout_s):
+                 recovery_cmd, timeout_s = 300):
         """ Initialize DB connection with given credentials. 
         
         Args:
