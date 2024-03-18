@@ -314,7 +314,10 @@ class NlpTuningEnv(gym.Env):
             reward for DBMS accepting parameter value assignment
         """
         param = hint.param.group()
-        value = str(int(self.base * self.factor)) + hint.val_unit
+        if (self.base * self.factor).is_integer():                
+            value = str(int(self.base * self.factor)) + hint.val_unit
+        else:
+            value = str(self.base * self.factor) + hint.val_unit
         success = self.dbms.can_set(param, value)
         assignment = (param, value)
         print(f'Trying assigning {param} to {value}')

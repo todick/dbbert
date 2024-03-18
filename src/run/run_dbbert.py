@@ -3,7 +3,9 @@ Created on Aug 15, 2023
 
 @author: immanueltrummer
 '''
-import subprocess
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from pybullet_utils.util import set_global_seeds
 
 import argparse

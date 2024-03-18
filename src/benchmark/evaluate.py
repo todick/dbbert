@@ -8,6 +8,7 @@ from abc import abstractmethod
 import glob
 import math
 import os
+import sys
 import pandas as pd
 import psycopg2
 import subprocess
@@ -301,12 +302,13 @@ class Benchbase(Benchmark):
         try:
             # Run benchmark                
             print(f'Starting {self.benchmark} benchmark.')
+            sys.stdout.flush()
             return_code = subprocess.run(\
                 ['java', '-jar', 'benchbase.jar', '-b', self.benchmark, '-c', self.config_path,
                 '--execute=true', '-d', self.result_path],
-                cwd = self.benchbase_path, timeout=self.timeout)
-            print(f'Benchmark return code: {return_code}')
-            
+                cwd = self.benchbase_path, timeout=self.timeout, stdout=open(os.devnull, 'wb'))
+            print(f'Benchmark return code: {return_code}')   
+                
             # Extract throughput from generated files
             results_file = max(glob.iglob(f'{self.result_path}/*.summary.json'), key=os.path.getctime)
             results = json.load(open(results_file))
@@ -314,7 +316,7 @@ class Benchbase(Benchmark):
             # Throughput based benchmarks
             if(self.benchmark == "tpcc"):
                 throughput = results['Throughput (requests/second)']
-                if not math.isnan(throughput):
+                if not math.isnan(throughput) and return_code != 0:
                     print(f'Measured valid throughput: {throughput}')
                     had_error = False
                 else:
@@ -334,7 +336,7 @@ class Benchbase(Benchmark):
             # Time-based benchmarks
             elif(self.benchmark == "tpch"):
                 time = results['Latency Distribution']['Average Latency (microseconds)'] / 1000000.0
-                if not math.isnan(time):
+                if not math.isnan(time) and return_code != 0:
                     print(f'Measured average latency: {time}')
                     had_error = False
                 else:
