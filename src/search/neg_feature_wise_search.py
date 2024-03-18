@@ -10,22 +10,7 @@ from parameters.util import is_numerical, convert_to_bytes
 from search.objectives import calculate_reward
 from search.search_with_hints import ParameterExplorer
 
-class ParameterResults():
-    def __init__(self):
-        self.best_value = 0
-        self.best_reward = -float('inf')
-        self.tested_values = {}
-        
-    def add_result(self, value, reward):
-        self.tested_values[value] = reward
-        if reward > self.best_reward:
-            self.best_value = value
-            self.best_reward = reward
-            
-    def has_value(self, value):
-        return value in self.tested_values
-
-class FeatureWiseExplorer(ParameterExplorer):
+class NegFeatureWiseExplorer(ParameterExplorer):
     """ Explores the parameter space using previously collected tuning hints. """
 
     def __init__(self, dbms: ConfigurableDBMS, benchmark: Benchmark, objective):
@@ -38,7 +23,7 @@ class FeatureWiseExplorer(ParameterExplorer):
         """
         super().__init__(dbms, benchmark, objective)
         self.max_reward = 0
-        self.tested_parameters = {}
+        self.best_parameters = {}
 
     def _def_conf_metrics(self):
         """ Returns metrics for running benchmark with default configuration. """
@@ -79,40 +64,27 @@ class FeatureWiseExplorer(ParameterExplorer):
         print(f'Obtained {max_reward} by configuration {best_config}')
         if max_reward > self.max_reward:
             self.max_reward = max_reward
-            self._evaluate_parameters(best_config)    
-            recommended_config = {}
-            self._include_tested_parameters(recommended_config)
-            if len(recommended_config) > 1:
-                reward = self._evaluate_config(recommended_config)
+            self._evaluate_parameters(best_config, max_reward)    
+            if len(self.best_parameters) > 1:
+                reward = self._evaluate_config(self.best_parameters)
                 if reward > max_reward:
                     max_reward = reward
-                    best_config = recommended_config
+                    best_config = self.best_parameters
             
         return max_reward, best_config
 
-    def _evaluate_parameters(self, best_config):            
+    def _evaluate_parameters(self, best_config, max_reward):            
         print('Benchmarking parameters individually')  
+        self.best_parameters = {}
         # Evaluate parameters
         for p, val in best_config.items():
-            if p in self.tested_parameters:
-                if self.tested_parameters[p].has_value(val):
-                    continue
-            else:
-                self.tested_parameters[p] = ParameterResults()
-            reward = self._evaluate_config({p : val})
-            self.tested_parameters[p].add_result(val, reward)
-            print(f'Obtained {reward} by setting {p} to {val}')
-
-    def _include_tested_parameters(self, config):
-        for p, res in self.tested_parameters.items():
-            if p in config:
-                if config[p] in res.tested_values and res.tested_values[config[p]] < 2:
-                    # Exclude parameter settings that we know affect performance negatively
-                    config.pop(p)
-            else:
-                if res.best_reward > 2:
-                    # Include parameter settings that we know affect performance positively
-                   config[p] = res.best_value 
+            config = best_config.copy()
+            del config[p]
+            reward = self._evaluate_config(config)
+            loss = max_reward - reward
+            if loss > 2:
+                self.best_parameters[p] = val
+            print(f'Lost {loss} by setting removing {p} from {best_config}')
 
     def _select_configs(self, hint_to_weight, nr_evals):
         """ Returns set of interesting configurations, based on hints. 
@@ -127,8 +99,10 @@ class FeatureWiseExplorer(ParameterExplorer):
         param_to_w_vals = self._gather_values(hint_to_weight)
         configs = []
         for _ in range(nr_evals):
-            config = self._next_config(configs, param_to_w_vals)  
-            configs.append(config)
-        for config in configs:            
-            self._include_tested_parameters(config)      
+            config = self._next_config(configs, param_to_w_vals)
+            for p, val in self.best_parameters:
+                if p not in config:
+                    config[p] = val
+            configs.append(config)    
+            
         return configs      
