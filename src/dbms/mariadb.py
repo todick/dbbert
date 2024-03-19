@@ -173,6 +173,8 @@ class MariaDBconfig(ConfigurableDBMS):
     
     def set_param(self, param, value):
         """ Set parameter to given value. """
+        if param == "innodb_buffer_pool_size" and value.isdigit() and int(value) > 17179869184:
+            return False
         if param in self.global_vars:
             success = self.update(f'set global {param}={value}')
         else: 
