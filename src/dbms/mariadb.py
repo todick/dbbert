@@ -8,7 +8,6 @@ from dbms.generic_dbms import ConfigurableDBMS
 import mariadb
 import os
 from parameters.util import is_numerical
-import time
 
 class MariaDBconfig(ConfigurableDBMS):
     """ Represents configurable MariaDB database. Since MariaDB is based on MySQL, it 
@@ -173,8 +172,6 @@ class MariaDBconfig(ConfigurableDBMS):
     
     def set_param(self, param, value):
         """ Set parameter to given value. """
-        if param == "innodb_buffer_pool_size" and value.isdigit() and int(value) > 17179869184:
-            return False
         if param in self.global_vars:
             success = self.update(f'set global {param}={value}')
         else: 

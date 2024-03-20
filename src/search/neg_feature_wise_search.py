@@ -92,7 +92,7 @@ class NegFeatureWiseExplorer(ParameterExplorer):
         configs = []
         for _ in range(nr_evals):
             config = self._next_config(configs, param_to_w_vals)
-            for p, val in self.best_parameters:
+            for p, val in self.best_parameters.items():
                 if p not in config:
                     config[p] = val
             configs.append(config)    
